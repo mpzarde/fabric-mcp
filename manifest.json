@@ -9,12 +9,32 @@
   },
   "homepage": "https://github.com/danielmiessler/fabric",
   "icon": "icon.png",
+  "user_config": {
+    "fabricPath": {
+      "type": "string",
+      "title": "Fabric Executable Path",
+      "description": "Path to the fabric executable. Leave empty for auto-detection.",
+      "default": "",
+      "required": false
+    },
+    "ytdlpPath": {
+      "type": "string",
+      "title": "yt-dlp Executable Path",
+      "description": "Path to the yt-dlp executable. Leave empty for auto-detection.",
+      "default": "",
+      "required": false
+    }
+  },
   "server": {
     "type": "node",
     "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/index.js"]
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "FABRIC_PATH": "${user_config.fabricPath}",
+        "YTDLP_PATH": "${user_config.ytdlpPath}"
+      }
     }
   }
 }

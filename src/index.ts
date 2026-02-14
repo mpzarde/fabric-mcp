@@ -8,11 +8,13 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { spawn } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { platform } from "os";
 import { join } from "path";
+import { get as httpsGet } from "https";
+import { get as httpGet } from "http";
 
 const execFileAsync = promisify(execFile);
 
@@ -67,8 +69,15 @@ function buildEnhancedPath(): string {
 
 const ENHANCED_PATH = buildEnhancedPath();
 
-// Get Fabric path - try common locations, then PATH
+// Get Fabric path - check config first, then try common locations, then PATH
 function getFabricCommand(): string {
+  // Check if path is provided via environment variable (from config)
+  const configPath = process.env.FABRIC_PATH;
+  if (configPath && configPath.trim() !== "") {
+    console.error(`Using configured fabric path: ${configPath}`);
+    return configPath;
+  }
+
   const isWindows = platform() === "win32";
   const homeDir = getHomeDir();
   const fabricName = isWindows ? "fabric.exe" : "fabric";
@@ -117,8 +126,15 @@ function getFabricCommand(): string {
 
 const FABRIC_COMMAND = getFabricCommand();
 
-// Get yt-dlp command with enhanced path
+// Get yt-dlp command - check config first, then try common locations, then PATH
 function getYtDlpCommand(): string {
+  // Check if path is provided via environment variable (from config)
+  const configPath = process.env.YTDLP_PATH;
+  if (configPath && configPath.trim() !== "") {
+    console.error(`Using configured yt-dlp path: ${configPath}`);
+    return configPath;
+  }
+
   const isWindows = platform() === "win32";
   const homeDir = getHomeDir();
   const ytdlpName = isWindows ? "yt-dlp.exe" : "yt-dlp";
@@ -187,7 +203,10 @@ async function runFabric(args: string[], input?: string, timeoutMs: number = 300
     }, timeoutMs);
 
     fabricProcess.stdout.on("data", (data) => {
-      stdout += data.toString();
+      const chunk = data.toString();
+      stdout += chunk;
+      // Log chunks as they arrive for real-time monitoring
+      process.stderr.write(chunk);
     });
 
     fabricProcess.stderr.on("data", (data) => {
@@ -250,9 +269,13 @@ async function applyPattern(
   input: string
 ): Promise<string> {
   try {
-    const output = await runFabric(["--pattern", patternName], input);
+    // Use a longer timeout for pattern execution (5 minutes) since LLM calls can take time
+    console.error(`Applying pattern '${patternName}' (timeout: 5 minutes)`);
+    const output = await runFabric(["--pattern", patternName], input, 300000);
+    console.error(`Pattern '${patternName}' completed successfully`);
     return output;
   } catch (error) {
+    console.error(`Pattern '${patternName}' failed:`, error);
     throw new Error(`Error applying pattern: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -265,6 +288,66 @@ async function getYouTubeTranscript(url: string): Promise<string> {
   } catch (error) {
     throw new Error(`Error fetching YouTube transcript: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+// Helper to read file content
+async function readFile(filePath: string): Promise<string> {
+  try {
+    if (!existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    const content = readFileSync(filePath, 'utf-8');
+    console.error(`Read file: ${filePath} (${content.length} chars)`);
+    return content;
+  } catch (error) {
+    throw new Error(`Error reading file: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+// Helper to fetch URL content
+async function fetchUrl(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const get = urlObj.protocol === 'https:' ? httpsGet : httpGet;
+    
+    console.error(`Fetching URL: ${url}`);
+    
+    const options = {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Fabric-MCP/1.0; +https://github.com/danielmiessler/fabric)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }
+    };
+    
+    get(url, options, (res) => {
+      // Handle redirects
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        if (res.headers.location) {
+          console.error(`Following redirect to: ${res.headers.location}`);
+          return fetchUrl(res.headers.location).then(resolve).catch(reject);
+        }
+      }
+      
+      if (res.statusCode !== 200) {
+        reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+        return;
+      }
+      
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        console.error(`Fetched URL: ${url} (${data.length} chars, status: ${res.statusCode})`);
+        resolve(data);
+      });
+    }).on('error', (err) => {
+      reject(new Error(`Error fetching URL: ${err.message}`));
+    });
+  });
 }
 
 // Helper to run any command with proper stdin handling
@@ -546,6 +629,63 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         properties: {},
       },
     },
+    // Combined YouTube + pattern tool (ensures full transcript is processed)
+    {
+      name: "analyze_youtube_video",
+      description: "Fetch a YouTube transcript and analyze it with a Fabric pattern in one step. This ensures the complete transcript is processed without truncation. Use this instead of calling get_youtube_transcript and then a pattern separately.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "The YouTube video URL",
+          },
+          pattern: {
+            type: "string",
+            description: "The Fabric pattern to apply (e.g., 'extract_wisdom', 'summarize', 'analyze_claims', 'create_quiz', etc.)",
+          },
+        },
+        required: ["url", "pattern"],
+      },
+    },
+    // Combined file + pattern tool
+    {
+      name: "analyze_file",
+      description: "Read a file and analyze it with a Fabric pattern in one step. This ensures the complete file content is processed without truncation. Useful for analyzing documents, code files, logs, etc.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          file_path: {
+            type: "string",
+            description: "The absolute path to the file to analyze",
+          },
+          pattern: {
+            type: "string",
+            description: "The Fabric pattern to apply (e.g., 'summarize', 'explain_code', 'analyze_logs', etc.)",
+          },
+        },
+        required: ["file_path", "pattern"],
+      },
+    },
+    // Combined URL + pattern tool (for web articles)
+    {
+      name: "analyze_url",
+      description: "Fetch content from a URL and analyze it with a Fabric pattern in one step. Works with articles, documentation, blog posts, etc. This ensures complete content is processed without truncation.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "The URL to fetch and analyze",
+          },
+          pattern: {
+            type: "string",
+            description: "The Fabric pattern to apply (e.g., 'extract_wisdom', 'summarize', 'analyze_paper', etc.)",
+          },
+        },
+        required: ["url", "pattern"],
+      },
+    },
   ];
 
   // Add specific tools for key patterns
@@ -618,6 +758,78 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
 
+    // Handle combined YouTube + pattern analysis
+    if (name === "analyze_youtube_video") {
+      const url = args?.url as string;
+      const pattern = args?.pattern as string;
+      
+      if (!url || !pattern) {
+        throw new Error("Both url and pattern parameters are required");
+      }
+      
+      console.error(`Fetching transcript from: ${url}`);
+      const transcript = await getYouTubeTranscript(url);
+      console.error(`Transcript fetched: ${transcript.length} chars`);
+      
+      console.error(`Applying pattern '${pattern}' to transcript`);
+      const result = await applyPattern(pattern, transcript);
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: result,
+          },
+        ],
+      };
+    }
+
+    // Handle combined file + pattern analysis
+    if (name === "analyze_file") {
+      const filePath = args?.file_path as string;
+      const pattern = args?.pattern as string;
+      
+      if (!filePath || !pattern) {
+        throw new Error("Both file_path and pattern parameters are required");
+      }
+      
+      const content = await readFile(filePath);
+      console.error(`Applying pattern '${pattern}' to file content`);
+      const result = await applyPattern(pattern, content);
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: result,
+          },
+        ],
+      };
+    }
+
+    // Handle combined URL + pattern analysis
+    if (name === "analyze_url") {
+      const url = args?.url as string;
+      const pattern = args?.pattern as string;
+      
+      if (!url || !pattern) {
+        throw new Error("Both url and pattern parameters are required");
+      }
+      
+      const content = await fetchUrl(url);
+      console.error(`Applying pattern '${pattern}' to URL content`);
+      const result = await applyPattern(pattern, content);
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: result,
+          },
+        ],
+      };
+    }
+
     // Handle generic pattern runner
     if (name === "run_fabric_pattern") {
       const pattern = args?.pattern as string;
@@ -646,6 +858,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!input) {
         throw new Error("input parameter is required");
       }
+
+      // Log input size for debugging
+      const inputLength = input.length;
+      const inputPreview = input.substring(0, 100).replace(/\n/g, " ");
+      console.error(`Pattern '${patternName}' - Input length: ${inputLength} chars`);
+      console.error(`Pattern '${patternName}' - Input preview: ${inputPreview}...`);
 
       const result = await applyPattern(patternName, input);
       return {

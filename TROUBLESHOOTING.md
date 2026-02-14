@@ -1,5 +1,19 @@
 # Troubleshooting Guide
 
+## Quick Health Check
+
+**First step**: Ask Claude to run a health check!
+
+```
+Run a health check
+```
+
+This will verify:
+- Fabric installation and version
+- Fabric configuration (API keys, patterns)
+- yt-dlp installation (for YouTube support)
+- Provide specific installation instructions if anything is missing
+
 ## Installation Issues
 
 ### Issue: Bundle won't install in Claude Desktop
@@ -97,27 +111,26 @@
 **Symptoms:**
 - Can see patterns but they fail when run
 - Timeout errors
-- Connection errors
+- Fabric command errors
 
 **Solutions:**
 
-1. **Check Fabric server**
+1. **Check Fabric directly**
    ```bash
-   # Try starting Fabric server manually
-   fabric --serve
-   # Should start on http://localhost:8080
+   # Test fabric works
+   fabric --version
+   echo "test" | fabric --pattern summarize
    ```
 
-2. **Set environment variables**
-   - If using custom Fabric configuration:
+2. **Verify Fabric is configured**
    ```bash
-   export FABRIC_HOST="http://localhost"
-   export FABRIC_PORT="8080"
+   fabric --setup
+   # Make sure you have API keys configured
    ```
 
-3. **Check network/firewall**
-   - Ensure localhost connections are allowed
-   - Check if port 8080 is available
+3. **Check for custom paths**
+   - If fabric is in a non-standard location, set `FABRIC_PATH` in your MCP config
+   - If yt-dlp is in a non-standard location, set `YTDLP_PATH`
 
 ## Debug Mode
 
@@ -135,10 +148,11 @@ To get more detailed logs:
    # Press Ctrl+C to exit
    ```
 
-3. **Test Fabric integration**
+3. **Test Fabric directly**
    ```bash
-   # Test if Fabric patterns are accessible
-   curl http://localhost:8080/patterns/names
+   # Test if Fabric works
+   fabric --listpatterns
+   # Should show available patterns
    ```
 
 ## Common Error Messages
@@ -162,7 +176,7 @@ npm install
 chmod +x ~/Library/Application\ Support/Claude/extensions/fabric-mcp/dist/index.js
 ```
 
-### "Fabric server failed to start"
+### "Failed to spawn fabric: ENOENT"
 
 **Cause:** Fabric not installed or not in PATH
 
@@ -170,7 +184,17 @@ chmod +x ~/Library/Application\ Support/Claude/extensions/fabric-mcp/dist/index.
 ```bash
 pipx install fabric-ai
 fabric --setup
+# Verify: which fabric
 ```
+
+### "Fabric command timed out"
+
+**Cause:** Pattern execution taking too long (default: 5 minutes)
+
+**Solution:**
+- Large content or complex patterns may take time
+- Check your Fabric API keys and quota
+- Try with smaller input first
 
 ## Getting Help
 

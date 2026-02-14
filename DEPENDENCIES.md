@@ -1,6 +1,20 @@
 # Dependencies
 
-## Runtime Dependencies
+## External Tool Dependencies
+
+### Fabric (Required)
+- **Purpose**: AI pattern execution engine
+- **Installation**: `pipx install fabric-ai`
+- **Configuration**: `fabric --setup` (required)
+- **Used for**: Running patterns, listing patterns, YouTube transcripts
+
+### yt-dlp (Optional)
+- **Purpose**: YouTube video transcript extraction
+- **Installation**: `brew install yt-dlp` (macOS) or `pip install yt-dlp`
+- **Used for**: `get_youtube_transcript` and `analyze_youtube_video` tools
+- **Note**: Fabric also uses yt-dlp internally for `--youtube` flag
+
+## Runtime Dependencies (npm)
 
 ### @modelcontextprotocol/sdk (^1.0.4)
 - **Purpose**: Implements the MCP (Model Context Protocol) to communicate with Claude Desktop
@@ -15,8 +29,9 @@
 - Various utilities
 
 ### Node.js Built-ins Used
-- `child_process.spawn` - To execute the `fabric` CLI command
-- `fs` (indirectly via require) - To check if fabric exists at common paths
+- `child_process.spawn` - To execute the `fabric` and `yt-dlp` CLI commands
+- `fs` - To check if executables exist at common paths, read local files
+- `https`/`http` - To fetch content from URLs
 
 ## Development Dependencies
 

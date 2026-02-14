@@ -4,14 +4,40 @@ Model Context Protocol (MCP) server for [Fabric](https://github.com/danielmiessl
 
 This MCP server allows Claude (via Claude Desktop or Warp CLI) to use Fabric's extensive collection of AI patterns for content analysis, summarization, learning, coding, security analysis, and more.
 
+## Quick Start
+
+1. **Install Fabric** (if not already installed):
+   ```bash
+   pipx install fabric-ai
+   fabric --setup
+   ```
+
+2. **Install yt-dlp** (optional, for YouTube transcripts):
+   ```bash
+   # macOS
+   brew install yt-dlp
+   
+   # Linux/Windows
+   pip install yt-dlp
+   ```
+
+3. **Download and Install**:
+   - Download `fabric-mcp.mcpb` from [Releases](https://github.com/mpzarde/fabric-mcp/releases/latest)
+   - Double-click the file
+   - Click "Install" in Claude Desktop
+   - Restart Claude Desktop
+
+4. **Try it**:
+   Ask Claude: "List all fabric patterns"
+
 ## Features
 
-- 🚀 **Auto-start**: Automatically starts Fabric REST API server if not running
+- 🚀 **Direct CLI Integration**: Uses Fabric CLI directly (no REST API server needed)
 - 🔧 **15+ Pre-configured Tools**: Direct access to commonly-used Fabric patterns
 - 🎯 **Generic Pattern Runner**: Run any Fabric pattern with `run_fabric_pattern`
-- 📺 **YouTube Support**: Fetch video transcripts directly
+- 📺 **YouTube Support**: Fetch video transcripts directly (requires yt-dlp)
 - 🔍 **Pattern Discovery**: List all available patterns dynamically
-- 🔐 **API Key Support**: Optional authentication with Fabric API
+- 📁 **File & URL Analysis**: Process files and web content with Fabric patterns
 
 ## Prerequisites
 
@@ -20,11 +46,11 @@ This MCP server allows Claude (via Claude Desktop or Warp CLI) to use Fabric's e
 If you don't have Fabric installed:
 
 ```bash
-# Install Fabric
-pip install fabric-ai
-
-# Or using pipx (recommended)
+# Install Fabric using pipx (recommended)
 pipx install fabric-ai
+
+# Or using pip
+pip install fabric-ai
 
 # Setup Fabric (configures API keys, patterns, etc.)
 fabric --setup
@@ -32,39 +58,55 @@ fabric --setup
 
 For detailed Fabric installation instructions, see: https://github.com/danielmiessler/Fabric#installation
 
-### 2. Verify Fabric Installation
+### 2. Install yt-dlp (Optional)
+
+Required only if you want to fetch YouTube transcripts:
 
 ```bash
-# Test that fabric is working
-fabric --version
+# macOS
+brew install yt-dlp
 
-# List available patterns
+# Linux
+pip install yt-dlp
+# Or: sudo apt install yt-dlp (on Ubuntu/Debian)
+
+# Windows
+pip install yt-dlp
+```
+
+### 3. Verify Installation
+
+```bash
+# Test Fabric
+fabric --version
 fabric --listpatterns
 
-# Optional: Test the REST API manually
-fabric --serve
-# In another terminal: curl http://localhost:8080/patterns/names
+# Test yt-dlp (optional)
+yt-dlp --version
 ```
 
 ## Installation
 
-### Option 1: Double-Click Install (Recommended) 🎉
+### Option 1: Download and Install (Recommended) 🎉
 
 The easiest way to install:
 
-1. **Double-click** `fabric-mcp.mcpb`
-2. Claude Desktop will open and prompt you to install
-3. Click **Install**
-4. Done!
+1. **Download** the latest `fabric-mcp.mcpb` from [Releases](https://github.com/mpzarde/fabric-mcp/releases/latest)
+2. **Double-click** the downloaded file
+3. Claude Desktop will open and prompt you to install
+4. Click **Install**
+5. **Restart** Claude Desktop
+6. Done!
 
 The `.mcpb` file is a self-contained bundle that includes everything needed.
 
-### Option 2: Manual Installation
+### Option 2: Build from Source
 
-If you want to install manually:
+If you want to build from source:
 
 ```bash
-cd /Users/mpzarde/projects/fabric-mcp
+git clone https://github.com/mpzarde/fabric-mcp.git
+cd fabric-mcp
 npm install
 npm run build
 ```
@@ -74,6 +116,8 @@ Then configure manually (see Configuration section below).
 ## Configuration
 
 ### For Claude Desktop
+
+> **Note**: If you installed using the `.mcpb` bundle (Option 1), Claude Desktop configures this automatically. This section is only needed for manual builds.
 
 Add to your Claude Desktop configuration file:
 
@@ -86,22 +130,25 @@ Add to your Claude Desktop configuration file:
   "mcpServers": {
     "fabric": {
       "command": "node",
-      "args": ["/Users/mpzarde/projects/fabric-mcp/dist/index.js"],
-      "env": {
-        "FABRIC_HOST": "http://localhost",
-        "FABRIC_PORT": "8080"
-      }
+      "args": ["/absolute/path/to/fabric-mcp/dist/index.js"]
     }
   }
 }
 ```
 
-**Optional environment variables:**
-- `FABRIC_API_KEY`: Your Fabric API key (if configured)
-- `FABRIC_HOST`: Fabric server host (default: `http://localhost`)
-- `FABRIC_PORT`: Fabric server port (default: `8080`)
+**Replace `/absolute/path/to/fabric-mcp/` with your actual project path.**
+
+**Optional environment variables** (if needed):
+```json
+"env": {
+  "FABRIC_PATH": "/custom/path/to/fabric",
+  "YTDLP_PATH": "/custom/path/to/yt-dlp"
+}
+```
 
 ### For Warp CLI
+
+> **Note**: Manual configuration is required for Warp. Build from source or extract the `.mcpb` bundle first.
 
 Add to your Warp MCP configuration file:
 
@@ -112,13 +159,19 @@ Add to your Warp MCP configuration file:
   "mcpServers": {
     "fabric": {
       "command": "node",
-      "args": ["/Users/mpzarde/projects/fabric-mcp/dist/index.js"],
-      "env": {
-        "FABRIC_HOST": "http://localhost",
-        "FABRIC_PORT": "8080"
-      }
+      "args": ["/absolute/path/to/fabric-mcp/dist/index.js"]
     }
   }
+}
+```
+
+**Replace `/absolute/path/to/fabric-mcp/` with your actual project path.**
+
+**Optional environment variables** (if needed):
+```json
+"env": {
+  "FABRIC_PATH": "/custom/path/to/fabric",
+  "YTDLP_PATH": "/custom/path/to/yt-dlp"
 }
 ```
 
@@ -237,51 +290,65 @@ Based on Daniel Miessler's Fabric patterns:
 
 ## Troubleshooting
 
-### Fabric server won't start
+### Check server health
 
-**Error**: `Fabric server failed to start`
+Ask Claude: "Run a health check" - this will verify:
+- Fabric installation and version
+- Fabric configuration (API keys, patterns)
+- yt-dlp installation (for YouTube support)
+- Provide installation instructions if anything is missing
+
+### Common Issues
+
+#### Fabric not found
+
+**Error**: `Failed to spawn fabric: ENOENT`
 
 **Solutions**:
-1. Verify Fabric is installed: `which fabric`
-2. Test Fabric manually: `fabric --version`
-3. Check if port 8080 is already in use: `lsof -i :8080`
-4. Try a different port in your MCP config:
-   ```json
-   "env": {
-     "FABRIC_PORT": "8081"
-   }
-   ```
+1. Install Fabric: `pipx install fabric-ai`
+2. Configure Fabric: `fabric --setup`
+3. Verify installation: `which fabric` and `fabric --version`
+4. If using a custom Fabric location, set `FABRIC_PATH` in your MCP config
 
-### Pattern not found
+#### Pattern not found
 
 **Error**: `Pattern not found: pattern_name`
 
 **Solutions**:
-1. List available patterns in Claude: Ask "List all fabric patterns"
-2. Update Fabric patterns: `fabric --updatepatterns`
-3. Check spelling - pattern names use underscores (e.g., `extract_wisdom` not `extractWisdom`)
+1. Ask Claude to list all patterns: "List all fabric patterns"
+2. Update patterns: `fabric --updatepatterns`
+3. Check spelling - use underscores (e.g., `extract_wisdom` not `extractWisdom`)
 
-### API authentication errors
+#### YouTube transcripts not working
 
-**Error**: `401 Unauthorized`
-
-**Solution**:
-If you've configured Fabric with an API key, add it to your MCP config:
-```json
-"env": {
-  "FABRIC_API_KEY": "your-api-key-here"
-}
-```
-
-### MCP server not appearing in Claude
+**Error**: `Failed to fetch YouTube transcript`
 
 **Solutions**:
-1. Verify the config file path is correct
-2. Check JSON syntax (use a JSON validator)
-3. Ensure the path to `dist/index.js` is absolute
-4. Restart Claude Desktop completely
-5. Check Claude's logs (usually in `~/Library/Logs/Claude/`)
+1. Install yt-dlp: `brew install yt-dlp` (macOS) or `pip install yt-dlp`
+2. Verify: `yt-dlp --version`
+3. If using custom location, set `YTDLP_PATH` in your MCP config
 
+#### MCP server not appearing in Claude
+
+**Solutions**:
+1. Verify config file location:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+2. Check JSON syntax with a validator
+3. Ensure path to `dist/index.js` is absolute
+4. Restart Claude Desktop completely
+5. Check logs: `~/Library/Logs/Claude/mcp-server-fabric.log`
+
+#### Pattern execution timeout
+
+**Error**: `Fabric command timed out`
+
+**Solutions**:
+- Large patterns may take time (default: 5 minutes)
+- Check your Fabric API keys and quota
+- Try with a smaller input first
+
+## Development
 ## Development
 
 ### Build
@@ -299,12 +366,15 @@ npm run watch
 ### Testing locally
 
 ```bash
-# Terminal 1: Start Fabric server manually
-fabric --serve
+# Build the project
+npm run build
 
-# Terminal 2: Test the MCP server
+# Test the MCP server
 node dist/index.js
-# Then interact via stdin/stdout (requires MCP client)
+# Server will run on stdio and wait for MCP protocol messages
+
+# Or use the health check to verify dependencies
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"health_check","arguments":{}}}' | node dist/index.js
 ```
 
 ## Architecture
@@ -319,11 +389,11 @@ node dist/index.js
 │  MCP Server     │ ← This project
 │  (Node.js)      │
 └────────┬────────┘
-         │ HTTP REST API
+         │ Direct CLI calls
          ▼
 ┌─────────────────┐
-│  Fabric Server  │
-│  (fabric --serve)│
+│  Fabric CLI     │
+│  (fabric cmd)   │
 └────────┬────────┘
          │
          ▼
@@ -334,15 +404,15 @@ node dist/index.js
 ```
 
 The MCP server:
-1. Automatically starts `fabric --serve` if not running
-2. Exposes Fabric patterns as MCP tools
-3. Translates MCP tool calls → Fabric REST API calls
-4. Returns results back to Claude/Warp
+1. Exposes Fabric patterns as MCP tools
+2. Calls Fabric CLI directly with pattern names and input
+3. Returns results back to Claude/Warp
+4. No REST API server needed - uses CLI interface
 
 ## Resources
 
 - **Fabric**: https://github.com/danielmiessler/Fabric
-- **Fabric REST API Docs**: https://github.com/danielmiessler/Fabric/blob/main/docs/rest-api.md
+- **yt-dlp**: https://github.com/yt-dlp/yt-dlp
 - **MCP Documentation**: https://modelcontextprotocol.io
 - **MCP SDK**: https://github.com/modelcontextprotocol/typescript-sdk
 

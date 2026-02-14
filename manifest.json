@@ -1,0 +1,20 @@
+{
+  "manifest_version": "0.3",
+  "name": "fabric-mcp",
+  "display_name": "Fabric AI Patterns",
+  "version": "1.0.0",
+  "description": "Access Daniel Miessler's Fabric AI patterns for content analysis, summarization, learning, coding, and security analysis",
+  "author": {
+    "name": "Community"
+  },
+  "homepage": "https://github.com/danielmiessler/fabric",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"]
+    }
+  }
+}

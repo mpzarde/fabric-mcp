@@ -7,10 +7,8 @@ This MCP server allows Claude (via Claude Desktop or Warp CLI) to use Fabric's e
 ## Quick Start
 
 1. **Install Fabric** (if not already installed):
-   ```bash
-   pipx install fabric-ai
-   fabric --setup
-   ```
+   
+   See the [official Fabric installation guide](https://github.com/danielmiessler/Fabric#installation) for detailed instructions.
 
 2. **Install yt-dlp** (optional, for YouTube transcripts):
    ```bash
@@ -44,20 +42,7 @@ This MCP server allows Claude (via Claude Desktop or Warp CLI) to use Fabric's e
 
 ### 1. Install Fabric
 
-If you don't have Fabric installed:
-
-```bash
-# Install Fabric using pipx (recommended)
-pipx install fabric-ai
-
-# Or using pip
-pip install fabric-ai
-
-# Setup Fabric (configures API keys, patterns, etc.)
-fabric --setup
-```
-
-For detailed Fabric installation instructions, see: https://github.com/danielmiessler/Fabric#installation
+If you don't have Fabric installed, follow the [official Fabric installation guide](https://github.com/danielmiessler/Fabric#installation).
 
 ### 2. Install yt-dlp (Optional)
 
@@ -344,10 +329,9 @@ Ask Claude: "Run a health check" - this will verify:
 **Error**: `Failed to spawn fabric: ENOENT`
 
 **Solutions**:
-1. Install Fabric: `pipx install fabric-ai`
-2. Configure Fabric: `fabric --setup`
-3. Verify installation: `which fabric` and `fabric --version`
-4. If using a custom Fabric location, set `FABRIC_PATH` in your MCP config
+1. Install Fabric following the [official installation guide](https://github.com/danielmiessler/Fabric#installation)
+2. Verify installation: `which fabric` and `fabric --version`
+3. If using a custom Fabric location, set `FABRIC_PATH` in your MCP config
 
 #### Pattern not found
 

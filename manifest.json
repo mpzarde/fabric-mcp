@@ -5,9 +5,10 @@
   "version": "1.0.0",
   "description": "Access Daniel Miessler's Fabric AI patterns for content analysis, summarization, learning, coding, and security analysis",
   "author": {
-    "name": "Community"
+    "name": "Martin Zardecki",
+    "url": "https://github.com/mpzarde"
   },
-  "homepage": "https://github.com/danielmiessler/fabric",
+  "homepage": "https://github.com/mpzarde/fabric-mcp",
   "icon": "icon.png",
   "user_config": {
     "fabricPath": {

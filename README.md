@@ -33,11 +33,12 @@ This MCP server allows Claude (via Claude Desktop or Warp CLI) to use Fabric's e
 ## Features
 
 - 🚀 **Direct CLI Integration**: Uses Fabric CLI directly (no REST API server needed)
-- 🔧 **15+ Pre-configured Tools**: Direct access to commonly-used Fabric patterns
+- 🔧 **19 Pre-configured Tools**: Direct access to commonly-used Fabric patterns plus combined analysis tools
 - 🎯 **Generic Pattern Runner**: Run any Fabric pattern with `run_fabric_pattern`
 - 📺 **YouTube Support**: Fetch video transcripts directly (requires yt-dlp)
 - 🔍 **Pattern Discovery**: List all available patterns dynamically
 - 📁 **File & URL Analysis**: Process files and web content with Fabric patterns
+- 🏥 **Health Check**: Verify dependencies and configuration
 
 ## Prerequisites
 
@@ -111,7 +112,9 @@ npm install
 npm run build
 ```
 
-Then configure manually (see Configuration section below).
+Then either:
+- **Build the `.mcpb` bundle**: `./build-mcpb.sh` (creates `fabric-mcp.mcpb` you can install)
+- **Configure manually**: See Configuration section below for manual setup
 
 ## Configuration
 
@@ -185,9 +188,21 @@ After configuration:
 
 ### Core Tools
 
-1. **`list_fabric_patterns`** - List all available Fabric patterns
-2. **`run_fabric_pattern`** - Run any Fabric pattern with custom input
-3. **`get_youtube_transcript`** - Fetch transcript from YouTube video
+1. **`health_check`** - Check if Fabric, yt-dlp, and other dependencies are installed and configured
+2. **`list_fabric_patterns`** - List all available Fabric patterns
+3. **`run_fabric_pattern`** - Run any Fabric pattern with custom input
+4. **`get_youtube_transcript`** - Fetch transcript from YouTube video
+
+### Combined Analysis Tools
+
+These tools streamline common workflows by fetching content and applying patterns in one step. Benefits:
+- ✅ **No truncation**: Complete content is passed directly to Fabric
+- ✅ **More efficient**: Single tool call instead of multiple
+- ✅ **Better results**: Fabric processes the full content without context window limits
+
+1. **`analyze_youtube_video`** - Fetch YouTube transcript and apply a pattern in one step
+2. **`analyze_file`** - Read a file and apply a pattern in one step
+3. **`analyze_url`** - Fetch URL content and apply a pattern in one step
 
 ### Pre-configured Pattern Tools
 
@@ -247,6 +262,30 @@ User: Review this git diff and summarize the changes:
       [paste git diff output]
 
 Claude: [Uses fabric_summarize_git_diff]
+```
+
+### Combined Analysis Tools
+
+For efficiency, use the combined tools that fetch and analyze in one step:
+
+```
+User: Extract wisdom from this YouTube video:
+      https://www.youtube.com/watch?v=example
+
+Claude: [Uses analyze_youtube_video with pattern='extract_wisdom']
+```
+
+```
+User: Summarize this article:
+      https://example.com/article
+
+Claude: [Uses analyze_url with pattern='summarize']
+```
+
+```
+User: Explain the code in /path/to/script.py
+
+Claude: [Uses analyze_file with pattern='explain_code']
 ```
 
 ### Chaining Patterns
@@ -349,12 +388,15 @@ Ask Claude: "Run a health check" - this will verify:
 - Try with a smaller input first
 
 ## Development
-## Development
 
 ### Build
 
 ```bash
+# Build TypeScript only
 npm run build
+
+# Build complete .mcpb bundle
+./build-mcpb.sh
 ```
 
 ### Watch mode

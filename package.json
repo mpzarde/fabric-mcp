@@ -1,6 +1,7 @@
 {
-  "name": "fabric-mcp-server",
+  "name": "@angrydad67/fabric-mcp-server",
   "version": "1.0.0",
+  "mcpName": "io.github.mpzarde/fabric-mcp",
   "description": "MCP server for Fabric AI patterns",
   "type": "module",
   "main": "dist/index.js",
